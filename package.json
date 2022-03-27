@@ -1,0 +1,11 @@
+{
+  "name": "thebart",
+  "version": "1.0.0",
+  "description": "This project's purpose is to agregate data and generate aggregated data in the form of XMLs!",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "",
+  "license": "ISC"
+}
