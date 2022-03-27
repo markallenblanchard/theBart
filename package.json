@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "This project's purpose is to agregate data and generate aggregated data in the form of XMLs!",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "npm test"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0"
+  }
 }
