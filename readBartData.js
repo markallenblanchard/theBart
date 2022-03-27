@@ -59,10 +59,9 @@ fs.createReadStream('./bart_data/test_v_filtered.csv')
       }
     } else {
       if ( ReleasePump === "1") { // if this row recorded a release!
-        console.log("Release recorded!")
         buttonStatus = buttonStata.release;
         const duration = Onset - pressOnset
-        console.log(duration);
+        console.log("duration of press: ", duration);
       }
     }
   })
