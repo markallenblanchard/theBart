@@ -41,27 +41,8 @@ let state = {
   reactionTime: -1,
 }
 
-const renderLoading = (number) => {
-  const value = number + 1
-  if (value % 2 === 0 ) {
-    console.clear()
-    console.log(loading[1])
-  } else if (value % 3 === 0 ) {
-    console.clear()
-    console.log(loading[2])
-  } else if (value % 4 === 0) {
-    console.clear()
-    console.log(loading[3])
-  } else {
-    console.clear()
-    console.log(loading[0])
-  }
-}
-
  const cleanUpOldFiles = () => {
   fs.stat('./summary/bartSummary.csv', function (err, stats) {
-    console.log(stats);//here we got all information of file in stats variable
-
     if (err) {
         return console.error(err);
     }
@@ -86,7 +67,7 @@ fs.readdir('./bart_data/', (err, files) => {
     fs.createReadStream('./bart_data/' + file)
       .pipe(csv())
       .on('data',  (bartEvent) => {
-        const {
+        let {
           X,
           Participant,
           Run,
@@ -98,54 +79,99 @@ fs.readdir('./bart_data/', (err, files) => {
           Tokens,
           CashIn,
           Pop,
-          Onset
+          Onset,
+          Condition
         } = bartEvent;
+        // if (Participant === "5.0") console.log("bart event: ", bartEvent)
+
+        X = +X
+        Condition = +Condition
+        Tokens = +Tokens
+        Onset = +Onset
+        Trial = +Trial
+        Pop = +Pop
+        CashIn = +CashIn
+        PressPump = +PressPump
+        ReleasePump = +ReleasePump
+        Participant = +Participant
+
 
         //don't start iteration on row 0, or on first row
         // bartEvent[""] is the event number
-        const eventNumber = Number(X);
-        if (eventNumber < 1) return
+        // const eventNumber = X
+        // if (eventNumber < 1) return
+
+        // console.log("Condition, bartEvent, CashIn, Pop", Condition, bartEvent[""], CashIn, Pop);
+        // if condition not a number, do not return
+
+        if (!isNaN(Condition) && Condition > 0) return
+        // if (typeof bartEvent[""] !== "number") return
+
+
+        // validate trial no cash in or pop on same trial as of yet
+        if (state.previousTrial === Trial && (state.pop || state.cashIn)) {
+          return;
+        }
 
         // check if cash-in or pop
         if ( CashIn ) state.cashIn = CashIn
         if ( Pop ) state.pop = Pop
 
-        // validate Trial and Participant helper function
-        if (state.previousTrial === Number(Trial) && state.previousPop || state.previousCashIn) {
-          return;
-        } else {
-          state = defaultState;
+        if (state.previousTrial !== Trial) {
+          state = { ...defaultState };
           state.previousParticipant = Participant
-          state.previousTrial = Number(Trial)
+          state.previousTrial = Trial
           state.pop = Pop
           state.cashIn = CashIn
+          return;
         }
 
         if (state.previousParticipant !== Participant) {
           state = { ...defaultState };
           state.previousParticipant = Participant
-          state.previousTrial = Number(Trial)
+          state.previousTrial = Trial
           state.pop = Pop
           state.cashIn = CashIn
           return;
         }
 
         if (state.buttonStatus === buttonStata.release) {
-          if (PressPump === "1") { // if this row recorded a button press!
+          if (PressPump === 1) { // if this row recorded a button press!
             state.buttonStatus = buttonStata.press;
             state.pressOnset = Onset;
             state.previousTokens = Tokens;
             state.pressCount += 1
-            if (state.releaseOnset) {
-              state.reactionTime = state.pressOnset - Onset;
-            }
           }
-        } else if ( ReleasePump === "1") { // if this row recorded a release!
+        } else if ( ReleasePump === 1) { // if this row recorded a release!
           state.buttonStatus = buttonStata.release;
           state.releaseOnset = Onset
+          state.reactionTime =  state.releaseOnset - state.pressOnset;
 
           //generate summary row
-          const cashInOrPop = state.cashIn || state.pop;
+          const cashInOrPop = CashIn || Pop;
+          const duration = Onset - state.pressOnset;
+          const tokensGained = Tokens - state.previousTokens
+
+          const summaryData = new Map();
+          summaryData.set("participant", Participant)
+          summaryData.set("trial", Trial)
+          summaryData.set("cashIn", state.cashIn)
+          summaryData.set("pop", state.pop)
+          summaryData.set("totalTokens", cashInOrPop ? Tokens : "NA")
+          summaryData.set("pressCount", state.pressCount)
+          summaryData.set("tokensGained", tokensGained)
+          summaryData.set("duration", duration)
+          summaryData.set("reactionTime", state.reactionTime)
+
+          const summaryRow = Array.from(summaryData, ([name, value]) => value).join(",")
+          summaryRows.push(summaryRow)
+        } else if ( CashIn === 1 || Pop === 1) {
+          state.buttonStatus = buttonStata.release;
+          state.releaseOnset = Onset
+          state.reactionTime =  state.releaseOnset - state.pressOnset;
+
+          //generate summary row
+          const cashInOrPop = CashIn || Pop;
           const duration = Onset - state.pressOnset;
           const tokensGained = Tokens - state.previousTokens
 
@@ -166,10 +192,11 @@ fs.readdir('./bart_data/', (err, files) => {
       })
       .on('end', () => {
         if (index === lastFile) {
+          // console.log(summaryRows)
           const bartSummary = fs.createWriteStream('./summary/bartSummary.csv')
           const summaryFinalString = summaryRows.join("\n")
           bartSummary.write(summaryFinalString)
-          console.clear()
+          // console.clear()
           console.log("done!");
           console.log("check the summary folder for results: /theBart/summary/bartSummary.csv");
         }

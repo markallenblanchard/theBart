@@ -8,7 +8,7 @@ export const validateTrial = (currentTrial, eventTrial) => {
 }
 
 export const validateParticipant = (currentParticipant, eventParticipant) => {
-
+  
 }
 export const generateSummaryCSV = (summaryData) => {
   let summaryCSV = Object.keys(summaryData[1]).join(",")
