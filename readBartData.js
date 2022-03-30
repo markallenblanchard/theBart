@@ -41,15 +41,49 @@ let state = {
   reactionTime: -1,
 }
 
+const renderLoading = (number) => {
+  const value = number + 1
+  if (value % 2 === 0 ) {
+    console.clear()
+    console.log(loading[1])
+  } else if (value % 3 === 0 ) {
+    console.clear()
+    console.log(loading[2])
+  } else if (value % 4 === 0) {
+    console.clear()
+    console.log(loading[3])
+  } else {
+    console.clear()
+    console.log(loading[0])
+  }
+}
+
+ const cleanUpOldFiles = () => {
+  fs.stat('./summary/bartSummary.csv', function (err, stats) {
+    console.log(stats);//here we got all information of file in stats variable
+
+    if (err) {
+        return console.error(err);
+    }
+
+    fs.unlink('./summary/bartSummary.csv',function(err){
+         if(err) return console.log(err);
+         console.log('file deleted successfully');
+    });
+ });
+ }
+
 const summaryRows = [ "participant, trial, cashIn, pop, totalTokens,  pressCount, tokensGained, duration, reactionTime" ]
 
 fs.readdir('./bart_data/', (err, files) => {
   if (err) throw err
-  files.forEach((file) => {
+  const totalNumberOfFiles = files.length
+  const lastFile = totalNumberOfFiles - 1
+  cleanUpOldFiles()
+
+  files.forEach((file, index) => {
     if(file[0] === ".") return
-    if(file === "bartSummary.csv") return
-    console.log("filename: ",file);
-    fs.createReadStream('./bart_data/'+ file)
+    fs.createReadStream('./bart_data/' + file)
       .pipe(csv())
       .on('data',  (bartEvent) => {
         const {
@@ -131,10 +165,14 @@ fs.readdir('./bart_data/', (err, files) => {
         }
       })
       .on('end', () => {
-        const bartSummary = fs.createWriteStream('./bartSummary.csv')
-        const summaryFinalString = summaryRows.join("\n")
-        bartSummary.write(summaryFinalString)
-        console.log("end event: \n", summaryFinalString);
+        if (index === lastFile) {
+          const bartSummary = fs.createWriteStream('./summary/bartSummary.csv')
+          const summaryFinalString = summaryRows.join("\n")
+          bartSummary.write(summaryFinalString)
+          console.clear()
+          console.log("done!");
+          console.log("check the summary folder for results: /theBart/summary/bartSummary.csv");
+        }
       });
   })
 })
