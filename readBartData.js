@@ -115,7 +115,6 @@ fs.readdir('./bart_data/', (err, files) => {
         // Trial should never be 0
         if (!Trial) return
 
-        // Trial should never be 0
         if (NewBalloon) state.newBalloonOnset = Onset
 
         // skip Conditions with 0 value
