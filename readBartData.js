@@ -181,6 +181,7 @@ fs.readdir('./bart_data/', (err, files) => {
       .on('end', () => {
         if (index === lastFile) {
           const bartSummary = fs.createWriteStream('./summary/bartSummary.csv');
+          summaryRows.sort((participant1, participant2) => +participant2[0] - +participant1[0] )
           const summaryFinalString = summaryRows.join('\n');
           bartSummary.write(summaryFinalString);
           console.log('done!');
