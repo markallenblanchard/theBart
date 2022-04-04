@@ -9,13 +9,14 @@ const buttonStata = {
 const defaultState = {
   buttonStatus: buttonStata.release,
   pressOnset: 0,
-  pressCount: 0,
   releaseOnset: 0,
+  cashInOnset: 0,
+  newBalloonOnset: 0,
+  pressCount: 0,
   previousTrial: 0,
   previousParticipant: 0,
   pop: 0,
   cashIn: 0,
-  cashInOnset: 0,
   previousTokens: 0,
   reactionTime: -1,
 };
@@ -23,13 +24,14 @@ const defaultState = {
 let state = {
   buttonStatus: buttonStata.release,
   pressOnset: 0,
-  pressCount: 0,
   releaseOnset: 0,
+  cashInOnset: 0,
+  newBalloonOnset: 0,
+  pressCount: 0,
   previousTrial: 0,
   previousParticipant: 0,
   pop: 0,
   cashIn: 0,
-  cashInOnset: 0,
   previousTokens: 0,
   reactionTime: -1,
 };
@@ -53,10 +55,6 @@ const cleanUpOldFiles = () => {
 
 const generateSummaryRow = (
   state,
-  participant,
-  trial,
-  cashIn,
-  pop,
   tokens,
   onset
 ) => {
@@ -99,9 +97,10 @@ fs.readdir('./bart_data/', (err, files) => {
           Pop,
           Onset,
           Condition,
+          NewBalloon
         } = bartEvent;
 
-        // cast some bart event data to number type
+        // cast some bart event data to number
         Condition = +Condition;
         Tokens = +Tokens;
         Onset = +Onset;
@@ -111,11 +110,15 @@ fs.readdir('./bart_data/', (err, files) => {
         PressPump = +PressPump;
         ReleasePump = +ReleasePump;
         Participant = +Participant;
+        NewBalloon = +NewBalloon;
 
         // Trial should never be 0
         if (!Trial) return
 
-        // if condition not a number, do not return
+        // Trial should never be 0
+        if (NewBalloon) state.newBalloonOnset = Onset
+
+        // skip Conditions with 0 value
         if (!isNaN(Condition) && Condition > 0) return;
 
         // validate same trial has no cash in nor pop
@@ -127,7 +130,6 @@ fs.readdir('./bart_data/', (err, files) => {
         }
 
         if (state.previousTrial !== Trial || state.previousParticipant !== Participant) {
-          // resetState(state, defaultState, Participant, Trial, Pop, CashIn);
           state = { ...defaultState };
           state.previousParticipant = Participant;
           state.previousTrial = Trial;
@@ -138,73 +140,42 @@ fs.readdir('./bart_data/', (err, files) => {
         if (Pop) state.pop = Pop;
 
         if (state.cashIn) {
-          // should a cash in or pop have a reaction time ?
           state.buttonStatus  = buttonStata.release;
           state.cashInOnset = Onset;
           state.reactionTime = state.cashInOnset - state.releaseOnset
 
-          summaryRows.push(
-            generateSummaryRow(
-              state,
-              state.previousparticipant,
-              state.previoustrial,
-              state.cashIn,
-              state.pop,
-              Tokens,
-              Onset
-            )
-          );
+          summaryRows.push( generateSummaryRow( state, Tokens, Onset ) );
           return
         }
 
         if (state.pop) {
-          // should a cash in or pop have a reaction time ?
           state.buttonStatus = buttonStata.release;
-          state.cashInOnset = Onset;
           state.reactionTime = 'NA'
 
-          summaryRows.push(
-            generateSummaryRow(
-              state,
-              state.previousparticipant,
-              state.previoustrial,
-              state.cashIn,
-              state.pop,
-              Tokens,
-              Onset
-            )
-          );
+          summaryRows.push( generateSummaryRow( state, Tokens, Onset ) );
           return
         }
 
         if (state.buttonStatus === buttonStata.release) {
+          // if this row recorded a button press!
           if (PressPump === 1) {
-            // if this row recorded a button press!
+            const balloonOnsetOrReleaseOnset = state.newBalloonOnset ? state.newBalloonOnset : state.releaseOnset
             state.buttonStatus = buttonStata.press;
             state.pressOnset = Onset;
             state.previousTokens = Tokens;
-            state.reactionTime = Onset - state.releaseOnset;
+            state.reactionTime = Onset - balloonOnsetOrReleaseOnset;
+            if(state.newBalloonOnset) state.newBalloonOnset = 0
           }
           return;
         }
 
+        // if this row recorded a release!
         if (state.buttonStatus === buttonStata.press && ReleasePump === 1) {
-          // if this row recorded a release!
           state.buttonStatus = buttonStata.release;
           state.releaseOnset = Onset;
           state.pressCount += 1;
 
-          summaryRows.push(
-            generateSummaryRow(
-              state,
-              state.previousparticipant,
-              state.previoustrial,
-              state.cashIn,
-              state.pop,
-              Tokens,
-              Onset
-            )
-          );
+          summaryRows.push( generateSummaryRow( state, Tokens, Onset ) );
           return;
         }
       })
@@ -214,9 +185,7 @@ fs.readdir('./bart_data/', (err, files) => {
           const summaryFinalString = summaryRows.join('\n');
           bartSummary.write(summaryFinalString);
           console.log('done!');
-          console.log(
-            'check the summary folder for results: /theBart/summary/bartSummary.csv'
-          );
+          console.log( 'check the summary folder for results: /theBart/summary/bartSummary.csv' );
         }
       });
   });
