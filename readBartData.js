@@ -37,16 +37,16 @@ let state = {
 };
 
 const summaryRows = [
-  'participant, trial, cashIn, pop, totalTokens,  pressCount, tokensGained, duration, reactionTime',
+  'participant,trial,cashIn,pop,totalTokens,pressCount,tokensGained,duration,reactionTime',
 ];
 
 const cleanUpOldFiles = () => {
-  fs.stat('./summary/bartSummary.csv', function (err, stats) {
+  fs.stat('./summary/bart-summary-sync-1.csv', function (err, stats) {
     if (err) {
       return;
     }
 
-    fs.unlink('./summary/bartSummary.csv', function (err) {
+    fs.unlink('./summary/bart-summary-sync-1.csv', function (err) {
       if (err) return console.log(err);
       console.log('file deleted successfully');
     });
@@ -180,12 +180,17 @@ fs.readdir('./bart_data/', (err, files) => {
       })
       .on('end', () => {
         if (index === lastFile) {
-          const bartSummary = fs.createWriteStream('./summary/bartSummary.csv');
-          summaryRows.sort((participant1, participant2) => +participant2[0] - +participant1[0] )
+          const bartSummary = fs.createWriteStream('./summary/bart-summary-sync-1.csv');
+          summaryRows.sort((participant1, participant2) => {
+            const p1 = participant1.split(',')
+            const p2 = participant2.split(',')
+            if (isNaN(+p2[0])) return participant2
+            return +p1[0] - +p2[0]
+          })
           const summaryFinalString = summaryRows.join('\n');
           bartSummary.write(summaryFinalString);
           console.log('done!');
-          console.log( 'check the summary folder for results: /theBart/summary/bartSummary.csv' );
+          console.log( 'check the summary folder for results: /theBart/summary/bart-summary-sync-1.csv' );
         }
       });
   });

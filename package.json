@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node readBartData",
+    "start": "node readBartData && node summarySecondSync",
+    "sync2": "node summarySecondSync",
     "test": "npm test"
   },
   "author": "",
